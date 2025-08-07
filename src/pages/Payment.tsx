@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { 
   CreditCard, 
   Wallet, 
@@ -21,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { orderService, ShippingAddress } from "@/services/orderService";
 import { paymentService } from "@/services/paymentService";
+import RazorpayCheckout from "@/components/payment/RazorpayCheckout";
 
 interface CartItem {
   id: string;
@@ -45,9 +47,10 @@ interface PaymentData {
 interface PaymentMethod {
   id: string;
   name: string;
-  type: 'card' | 'upi' | 'netbanking' | 'wallet';
+  type: 'razorpay' | 'cod' | 'card' | 'upi' | 'netbanking' | 'wallet';
   icon: React.ElementType;
   description: string;
+  enabled?: boolean;
 }
 
 const Payment = () => {
@@ -58,8 +61,9 @@ const Payment = () => {
   const { toast } = useToast();
 
   const paymentData = location.state as PaymentData;
-  const [selectedMethod, setSelectedMethod] = useState<string>("card");
+  const [selectedMethod, setSelectedMethod] = useState<string>("razorpay");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderCreated, setOrderCreated] = useState<any>(null);
 
   // Card details
   const [cardDetails, setCardDetails] = useState({
@@ -74,32 +78,52 @@ const Payment = () => {
 
   const paymentMethods: PaymentMethod[] = [
     {
+      id: "razorpay",
+      name: "Online Payment",
+      type: "razorpay",
+      icon: CreditCard,
+      description: "Pay securely with Credit/Debit Card, UPI, Net Banking, or Wallet",
+      enabled: true,
+    },
+    {
+      id: "cod",
+      name: "Cash on Delivery",
+      type: "cod",
+      icon: Clock,
+      description: "Pay when your order is delivered (₹50 extra charge)",
+      enabled: true,
+    },
+    {
       id: "card",
       name: "Credit/Debit Card",
       type: "card",
       icon: CreditCard,
-      description: "Visa, Mastercard, American Express"
+      description: "Visa, Mastercard, American Express",
+      enabled: false,
     },
     {
       id: "upi",
       name: "UPI",
       type: "upi",
       icon: Wallet,
-      description: "Pay using UPI ID"
+      description: "Pay using UPI ID",
+      enabled: false,
     },
     {
       id: "netbanking",
       name: "Net Banking",
       type: "netbanking",
       icon: Building,
-      description: "Pay through your bank"
+      description: "Pay through your bank",
+      enabled: false,
     },
     {
       id: "wallet",
       name: "Digital Wallet",
       type: "wallet",
       icon: Wallet,
-      description: "Paytm, PhonePe, Google Pay"
+      description: "Paytm, PhonePe, Google Pay",
+      enabled: false,
     }
   ];
 
@@ -127,6 +151,120 @@ const Payment = () => {
       return;
     }
   }, [paymentData, navigate, user, location]);
+
+  // Calculate totals
+  const subtotal = paymentData?.total || 0;
+  const tax = subtotal * 0.18; // 18% GST
+  const codCharge = selectedMethod === 'cod' ? 50 : 0;
+  const finalTotal = subtotal + tax + codCharge;
+
+  const handleRazorpaySuccess = async (razorpayResponse: any) => {
+    try {
+      setIsProcessing(true);
+      
+      // Clear cart on successful payment
+      clearCart();
+      
+      // Navigate to success page
+      navigate("/payment-success", {
+        state: {
+          orderId: orderCreated?.id || razorpayResponse.order_id,
+          orderNumber: orderCreated?.orderNumber || `ORD-${Date.now()}`,
+          total: finalTotal,
+          paymentMethod: "razorpay",
+          paymentId: razorpayResponse.payment_id,
+          razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+        }
+      });
+    } catch (error) {
+      console.error('Error handling payment success:', error);
+      toast({
+        title: "Error",
+        description: "Payment successful but order processing failed. Please contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRazorpayError = (error: Error) => {
+    console.error('Payment error:', error);
+    navigate("/payment-failure", {
+      state: {
+        orderId: orderCreated?.id || 'unknown',
+        error: error.message,
+        total: finalTotal,
+      }
+    });
+  };
+
+  const handleCODOrder = async () => {
+    if (!paymentData.shippingAddress) {
+      toast({
+        title: "Error",
+        description: "Shipping address is missing. Please go back to checkout.",
+        variant: "destructive",
+      });
+      navigate("/checkout");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // Create order with COD
+      const order = await orderService.createOrder(paymentData.shippingAddress);
+      
+      // Clear cart
+      clearCart();
+      
+      // Navigate to success page
+      navigate("/payment-success", {
+        state: {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          total: finalTotal,
+          paymentMethod: "cod",
+          codOrder: true,
+        }
+      });
+    } catch (error: any) {
+      console.error('COD order creation failed:', error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const createOrderForRazorpay = async () => {
+    if (!paymentData.shippingAddress) {
+      toast({
+        title: "Error",
+        description: "Shipping address is missing. Please go back to checkout.",
+        variant: "destructive",
+      });
+      navigate("/checkout");
+      return null;
+    }
+
+    try {
+      const order = await orderService.createOrder(paymentData.shippingAddress);
+      setOrderCreated(order);
+      return order;
+    } catch (error: any) {
+      console.error('Order creation failed:', error);
+      toast({
+        title: "Order Creation Failed",
+        description: error.message || "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -295,13 +433,28 @@ const Payment = () => {
                     return (
                       <div
                         key={method.id}
-                        className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedMethod(method.id)}
+                        className={`flex items-center space-x-3 p-4 border rounded-lg transition-colors ${
+                          selectedMethod === method.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        } ${method.enabled === false ? "opacity-50" : "cursor-pointer hover:bg-gray-50"}`}
+                        onClick={() => method.enabled !== false && setSelectedMethod(method.id)}
                       >
-                        <RadioGroupItem value={method.id} />
+                        <RadioGroupItem 
+                          value={method.id} 
+                          disabled={method.enabled === false}
+                        />
                         <IconComponent className="h-5 w-5 text-olive-600" />
                         <div className="flex-1">
-                          <h4 className="font-medium text-black">{method.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-black">{method.name}</h4>
+                            {method.id === 'cod' && (
+                              <Badge variant="outline">+₹50</Badge>
+                            )}
+                            {method.enabled === false && (
+                              <Badge variant="secondary">Coming Soon</Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">{method.description}</p>
                         </div>
                       </div>
@@ -317,6 +470,63 @@ const Payment = () => {
                 <CardTitle>Payment Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {selectedMethod === "razorpay" && (
+                  <div>
+                    <RazorpayCheckout
+                      orderId={orderCreated?.id || `temp-${Date.now()}`}
+                      amount={finalTotal}
+                      currency="INR"
+                      customerInfo={{
+                        name: user?.firstName && user?.lastName 
+                          ? `${user.firstName} ${user.lastName}` 
+                          : user?.email,
+                        email: user?.email,
+                        contact: user?.phone,
+                      }}
+                      onSuccess={handleRazorpaySuccess}
+                      onError={handleRazorpayError}
+                      disabled={isProcessing}
+                    />
+                    {!orderCreated && (
+                      <Button 
+                        onClick={createOrderForRazorpay}
+                        variant="outline"
+                        className="w-full mt-4"
+                      >
+                        Create Order for Payment
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {selectedMethod === "cod" && (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 mx-auto text-olive-600 mb-4" />
+                    <h3 className="text-lg font-semibold text-black mb-2">Cash on Delivery</h3>
+                    <p className="text-gray-600 mb-4">
+                      Pay ₹{finalTotal.toFixed(2)} when your order is delivered
+                    </p>
+                    <p className="text-sm text-orange-600 mb-4">
+                      Additional ₹50 COD charges included
+                    </p>
+                    <Button
+                      onClick={handleCODOrder}
+                      disabled={isProcessing}
+                      size="lg"
+                      className="w-full"
+                    >
+                      {isProcessing ? (
+                        "Processing..."
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Place COD Order
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
                 {selectedMethod === "card" && (
                   <div className="space-y-4">
                     <div>
@@ -433,7 +643,7 @@ const Payment = () => {
                       </p>
                     </div>
                     <span className="font-semibold text-black">
-                      ${((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
+                      ₹{((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -443,38 +653,47 @@ const Payment = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal:</span>
-                    <span className="text-black">${paymentData.total.toFixed(2)}</span>
+                    <span className="text-black">₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping:</span>
                     <span className="text-olive-600">Free</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax (18%):</span>
-                    <span className="text-black">${(paymentData.total * 0.18).toFixed(2)}</span>
+                    <span className="text-gray-600">GST (18%):</span>
+                    <span className="text-black">₹{tax.toFixed(2)}</span>
                   </div>
+                  {codCharge > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">COD Charges:</span>
+                      <span className="text-orange-600">₹{codCharge.toFixed(2)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
                     <span className="text-black">Total:</span>
-                    <span className="text-olive-600">${(paymentData.total * 1.18).toFixed(2)}</span>
+                    <span className="text-olive-600">₹{finalTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <Button
-                  onClick={handlePayment}
-                  disabled={isProcessing}
-                  className="w-full bg-olive-600 hover:bg-olive-700"
-                  size="lg"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Processing Payment...
-                    </>
-                  ) : (
-                    `Pay $${(paymentData.total * 1.18).toFixed(2)}`
-                  )}
-                </Button>
+                {/* Only show the old payment button for legacy methods */}
+                {!["razorpay", "cod"].includes(selectedMethod) && (
+                  <Button
+                    onClick={handlePayment}
+                    disabled={isProcessing}
+                    className="w-full bg-olive-600 hover:bg-olive-700"
+                    size="lg"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        Processing Payment...
+                      </>
+                    ) : (
+                      `Pay ₹${finalTotal.toFixed(2)}`
+                    )}
+                  </Button>
+                )}
 
                 <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
                   <Lock className="h-3 w-3" />

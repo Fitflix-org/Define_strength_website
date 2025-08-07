@@ -71,6 +71,22 @@ export const paymentService = {
     return response.data.payment;
   },
 
+  // Razorpay specific endpoints
+  async createRazorpayOrder(data: { orderId: string; amount: number; currency?: string }) {
+    const response = await api.post('/payments/razorpay/create-order', data);
+    return response.data;
+  },
+
+  async verifyRazorpayPayment(data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    order_id: string;
+  }) {
+    const response = await api.post('/payments/razorpay/verify', data);
+    return response.data;
+  },
+
   // Update payment status
   async updatePaymentStatus(paymentId: string, data: UpdatePaymentRequest): Promise<Payment> {
     const response = await api.patch(`/payments/${paymentId}/status`, data);
