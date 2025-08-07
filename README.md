@@ -96,14 +96,14 @@ Create environment files for different stages:
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api
 VITE_RAZORPAY_KEY_ID=rzp_test_your_test_key_here
-VITE_RAZORPAY_SECRET=your_test_secret_here
+# Note: Secret keys should NEVER be in frontend environment
 ```
 
 #### Production (.env.production)
 ```env
 VITE_API_BASE_URL=https://your-api-domain.com/api
 VITE_RAZORPAY_KEY_ID=rzp_live_your_live_key_here
-VITE_RAZORPAY_SECRET=your_live_secret_here
+# Note: Secret keys should NEVER be in frontend environment
 ```
 
 ### 4. Razorpay Setup
@@ -194,6 +194,14 @@ The frontend integrates with a RESTful API for:
 - POST `/payments/verify` - Verify payment
 - POST `/payments/webhook` - Razorpay webhook
 
+**⚠️ Backend Implementation Required**: 
+The frontend is ready for Razorpay integration, but requires backend APIs to be implemented for security. The backend must handle:
+- Order creation with Razorpay API (using secret key)
+- Payment signature verification (using secret key)
+- Webhook processing for payment confirmations
+
+Refer to `RAZORPAY_SECURITY_GUIDE.md` for complete backend implementation.
+
 ## Deployment
 
 ### Docker Deployment
@@ -227,9 +235,19 @@ docker-compose up -d
 
 ### Payment Security
 - All payment processing handled by Razorpay (PCI DSS compliant)
-- Payment verification using cryptographic signatures
+- **IMPORTANT**: Payment order creation and verification must be implemented on backend
+- **SECURITY NOTE**: Secret keys should NEVER be exposed to frontend
+- Payment signature verification on server-side only
 - No sensitive payment data stored locally
 - HTTPS required for production
+
+**⚠️ Current Implementation Note**: 
+The current frontend implementation includes placeholder Razorpay integration. For production use, you MUST implement proper backend APIs for:
+- Order creation (using secret key on backend)
+- Payment verification (using secret key on backend)
+- Webhook handling (for payment confirmations)
+
+See `RAZORPAY_SECURITY_GUIDE.md` for detailed implementation requirements.
 
 ### General Security
 - Environment variables for sensitive config
