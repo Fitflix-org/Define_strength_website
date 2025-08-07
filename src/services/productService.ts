@@ -71,5 +71,13 @@ export const productService = {
   async getCategories(): Promise<{ categories: Category[] }> {
     const response = await api.get('/products/categories/all');
     return response.data;
+  },
+
+  async getRelatedProducts(productId: string, limit: number = 4): Promise<{ products: Product[] }> {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    
+    const response = await api.get(`/products/${productId}/related?${params.toString()}`);
+    return response.data;
   }
 };

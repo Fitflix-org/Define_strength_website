@@ -6,6 +6,16 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# But keep example files
+!.env.example
+!.env.production
+!.env.development
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 

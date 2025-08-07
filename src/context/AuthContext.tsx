@@ -47,11 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const response = await authService.login(data);
       
-      // Store token in cookie with more permissive settings
+      // Store token in cookie with production-ready settings
+      const isProduction = import.meta.env.PROD;
       Cookies.set('auth_token', response.token, { 
         expires: 7, // 7 days
-        secure: false, // Allow on HTTP for localhost
-        sameSite: 'lax',
+        secure: isProduction, // Only secure in production
+        sameSite: isProduction ? 'strict' : 'lax',
         path: '/'
       });
       
@@ -78,11 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const response = await authService.register(data);
       
-      // Store token in cookie with more permissive settings
+      // Store token in cookie with production-ready settings
+      const isProduction = import.meta.env.PROD;
       Cookies.set('auth_token', response.token, { 
         expires: 7, // 7 days
-        secure: false, // Allow on HTTP for localhost
-        sameSite: 'lax',
+        secure: isProduction, // Only secure in production
+        sameSite: isProduction ? 'strict' : 'lax',
         path: '/'
       });
       
