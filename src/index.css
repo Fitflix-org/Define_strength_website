@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Professional Gym Equipment Design System - White, Black, Olive Green Theme */
+
+/* Custom animations for engaging content */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.4s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+@layer base {
+  :root {
+    /* Consistent color scheme: Black, White, Olive Green */
+    --background: 0 0% 100%;          /* Pure white */
+    --foreground: 0 0% 0%;            /* Pure black */
+
+    --card: 0 0% 100%;                /* White cards */
+    --card-foreground: 0 0% 0%;       /* Black text on cards */
+
+    --popover: 0 0% 100%;             /* White popovers */
+    --popover-foreground: 0 0% 0%;    /* Black text on popovers */
+
+    /* Primary - Olive Green */
+    --primary: 60 100% 25%;           /* Olive green #808000 */
+    --primary-foreground: 0 0% 100%;  /* White text on olive */
+
+    /* Secondary - Light gray for subtle backgrounds */
+    --secondary: 0 0% 96%;            /* Very light gray */
+    --secondary-foreground: 0 0% 0%;  /* Black text on light gray */
+
+    /* Muted tones - Gray for less important content */
+    --muted: 0 0% 96%;                /* Light gray */
+    --muted-foreground: 0 0% 45%;     /* Medium gray text */
+
+    /* Accent - Olive green accent */
+    --accent: 60 100% 25%;            /* Same as primary - olive green */
+    --accent-foreground: 0 0% 100%;   /* White text on olive */
+
+    /* Destructive - Keep red for errors but muted */
+    --destructive: 0 84% 60%;         
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders - Light gray */
+    --border: 0 0% 90%;               /* Light gray borders */
+    --input: 0 0% 90%;                /* Light gray input borders */
+    --ring: 60 100% 25%;              /* Olive green focus rings */
+
+    /* Accent - Olive green for highlights */
+    --accent: 75 30% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 9%;
+
+    /* Professional gradients with black and olive */
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 9%), hsl(75 30% 35%));
+    --gradient-accent: linear-gradient(180deg, hsl(75 15% 95%), hsl(0 0% 100%));
+    --gradient-dark: linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 15%));
+
+    /* Professional shadows */
+    --shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 8px 25px hsl(0 0% 0% / 0.15);
+    --shadow-lg: 0 25px 50px hsl(0 0% 0% / 0.25);
+    --shadow-accent: 0 8px 25px hsl(75 30% 35% / 0.2);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
