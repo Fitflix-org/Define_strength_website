@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { orderService, ShippingAddress } from "@/services/orderService";
 import { paymentService } from "@/services/paymentService";
+import { razorpayService } from "@/services/razorpayService";
 import RazorpayCheckout from "@/components/payment/RazorpayCheckout";
 
 interface CartItem {
@@ -37,11 +38,14 @@ interface CartItem {
 }
 
 interface PaymentData {
-  addressId: string;
-  orderNotes: string;
+  orderId?: string;
+  orderNumber?: string;
+  addressId?: string;
+  orderNotes?: string;
   total: number;
   items: CartItem[];
   shippingAddress?: ShippingAddress;
+  status?: string;
 }
 
 interface PaymentMethod {
@@ -60,7 +64,7 @@ const Payment = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const paymentData = location.state as PaymentData;
+  const paymentData = (location.state || {}) as PaymentData;
   const [selectedMethod, setSelectedMethod] = useState<string>("razorpay");
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCreated, setOrderCreated] = useState<any>(null);
@@ -162,26 +166,49 @@ const Payment = () => {
     try {
       setIsProcessing(true);
       
-      // Clear cart on successful payment
-      clearCart();
-      
-      // Navigate to success page
-      navigate("/payment-success", {
-        state: {
-          orderId: orderCreated?.id || razorpayResponse.order_id,
-          orderNumber: orderCreated?.orderNumber || `ORD-${Date.now()}`,
-          total: finalTotal,
-          paymentMethod: "razorpay",
-          paymentId: razorpayResponse.payment_id,
-          razorpayPaymentId: razorpayResponse.razorpay_payment_id,
-        }
+      // Step 4: Verify payment with backend
+      const verificationResponse = await razorpayService.verifyPayment({
+        razorpay_order_id: razorpayResponse.razorpay_order_id,
+        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+        razorpay_signature: razorpayResponse.razorpay_signature,
+        order_id: orderCreated?.id || ''
       });
-    } catch (error) {
-      console.error('Error handling payment success:', error);
+      
+      if (verificationResponse.verified) {
+        // Clear cart on successful payment verification
+        clearCart();
+        
+        // Navigate to success page with verified payment data
+        navigate("/payment-success", {
+          state: {
+            orderId: orderCreated?.id || razorpayResponse.razorpay_order_id,
+            orderNumber: orderCreated?.orderNumber || `ORD-${Date.now()}`,
+            total: finalTotal,
+            paymentMethod: "razorpay",
+            paymentId: verificationResponse.payment_id,
+            razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+            verified: true,
+          }
+        });
+      } else {
+        throw new Error("Payment verification failed");
+      }
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
       toast({
-        title: "Error",
-        description: "Payment successful but order processing failed. Please contact support.",
+        title: "Payment Verification Failed",
+        description: error.message || "Payment could not be verified. Please contact support.",
         variant: "destructive",
+      });
+      
+      // Navigate to failure page with error details
+      navigate("/payment-failure", {
+        state: {
+          orderId: orderCreated?.id || 'unknown',
+          error: error.message,
+          total: finalTotal,
+          razorpayResponse,
+        }
       });
     } finally {
       setIsProcessing(false);
@@ -306,8 +333,15 @@ const Payment = () => {
           return;
         }
 
-        // Create order first
-        const order = await orderService.createOrder(paymentData.shippingAddress);
+        // Use pre-created order or create new one
+        let order;
+        if (paymentData.orderId) {
+          // Order already created in checkout, fetch it
+          order = await orderService.getOrder(paymentData.orderId);
+        } else {
+          // Fallback: create order if not already created
+          order = await orderService.createOrder(paymentData.shippingAddress!);
+        }
         
         // Create a payment record
         const payment = await paymentService.createPayment({
@@ -326,8 +360,7 @@ const Payment = () => {
           gatewayFee: paymentData.total * 0.025, // 2.5% gateway fee
         });
 
-        // Clear cart on successful payment
-        clearCart();
+        // Cart is already cleared in checkout, no need to clear again
         
         // Navigate to success page
         navigate("/payment-success", {
@@ -472,29 +505,31 @@ const Payment = () => {
               <CardContent className="space-y-4">
                 {selectedMethod === "razorpay" && (
                   <div>
-                    <RazorpayCheckout
-                      orderId={orderCreated?.id || `temp-${Date.now()}`}
-                      amount={finalTotal}
-                      currency="INR"
-                      customerInfo={{
-                        name: user?.firstName && user?.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user?.email,
-                        email: user?.email,
-                        contact: user?.phone,
-                      }}
-                      onSuccess={handleRazorpaySuccess}
-                      onError={handleRazorpayError}
-                      disabled={isProcessing}
-                    />
-                    {!orderCreated && (
+                    {!orderCreated && !paymentData.orderId ? (
                       <Button 
                         onClick={createOrderForRazorpay}
-                        variant="outline"
-                        className="w-full mt-4"
+                        variant="default"
+                        className="w-full"
+                        disabled={isProcessing}
                       >
                         Create Order for Payment
                       </Button>
+                    ) : (
+                      <RazorpayCheckout
+                        orderId={orderCreated?.id || paymentData.orderId}
+                        amount={finalTotal}
+                        currency="INR"
+                        customerInfo={{
+                          name: user?.firstName && user?.lastName 
+                            ? `${user.firstName} ${user.lastName}` 
+                            : user?.email,
+                          email: user?.email,
+                          contact: user?.phone,
+                        }}
+                        onSuccess={handleRazorpaySuccess}
+                        onError={handleRazorpayError}
+                        disabled={isProcessing}
+                      />
                     )}
                   </div>
                 )}
@@ -624,10 +659,21 @@ const Payment = () => {
           <div className="lg:col-span-1">
             <Card className="sticky top-4">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Order Summary</CardTitle>
+                  {paymentData.orderId && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Order Created
+                    </Badge>
+                  )}
+                </div>
+                {paymentData.orderNumber && (
+                  <p className="text-sm text-gray-600">Order #{paymentData.orderNumber}</p>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
-                {paymentData.items.map((item) => (
+                {(paymentData?.items || []).map((item) => (
                   <div key={item.id} className="flex items-center space-x-3">
                     <img
                       src={item.product.images[0] || "/placeholder.svg"}

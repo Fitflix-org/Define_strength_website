@@ -36,10 +36,10 @@ export class RazorpayService {
     }
   }
 
-  // Create a new payment order
-  async createOrder(orderData: RazorpayOrderRequest): Promise<RazorpayOrderResponse> {
+  // Create a new payment order (backend computes amount/currency)
+  async createOrder(orderData: { orderId: string }): Promise<RazorpayOrderResponse> {
     try {
-      const response = await api.post('/payments/razorpay/create-order', orderData);
+      const response = await api.post('/payments/create-razorpay-order', orderData);
       return response.data;
     } catch (error: any) {
       console.error('Error creating Razorpay order:', error);
@@ -50,7 +50,7 @@ export class RazorpayService {
   // Verify payment signature
   async verifyPayment(verificationData: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
     try {
-      const response = await api.post('/payments/razorpay/verify', verificationData);
+      const response = await api.post('/payments/verify-payment', verificationData);
       return response.data;
     } catch (error: any) {
       console.error('Error verifying payment:', error);
@@ -130,17 +130,14 @@ export class RazorpayService {
   }): Promise<PaymentVerificationResponse> {
     try {
       // Step 1: Create Razorpay order
-      const orderResponse = await this.createOrder({
-        orderId,
-        amount,
-        currency
-      });
+      const orderResponse = await this.createOrder({ orderId });
 
-      // Step 2: Open Razorpay checkout
+      // Step 2: Open Razorpay checkout with backend-provided key and order id
       const paymentResponse = await this.openCheckout({
-        amount: orderResponse.amount,
-        currency: orderResponse.currency,
-        order_id: orderResponse.razorpay_order_id,
+        key: orderResponse.key,
+        amount: orderResponse.razorpayOrder.amount,
+        currency: orderResponse.razorpayOrder.currency,
+        order_id: orderResponse.razorpayOrder.id,
         prefill: customerInfo,
         notes: {
           order_id: orderId

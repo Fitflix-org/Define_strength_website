@@ -4,11 +4,16 @@ export interface Order {
   id: string;
   orderNumber: string;
   userId: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'payment_initiated' | 'payment_failed' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'expired';
   total: number;
   createdAt: string;
   updatedAt: string;
+  paymentInitiatedAt?: string;
+  expiresAt?: string;
+  lastPaymentAttempt?: string;
   items: OrderItem[];
+  canRetryPayment?: boolean;
+  isExpired?: boolean;
 }
 
 export interface OrderItem {
@@ -56,15 +61,21 @@ export const orderService = {
     return response.data;
   },
 
-  // Create a new order from cart
-  async createOrder(shippingAddress: ShippingAddress): Promise<Order> {
+  // Create a new order from cart (handles 200 or 201 and existing order reuse)
+  async createOrder(shippingAddress: ShippingAddress): Promise<{ order: Order; isExisting?: boolean }> {
     const response = await api.post('/orders/create', { shippingAddress });
-    return response.data.order;
+    return { order: response.data.order, isExisting: response.data.isExisting };
   },
 
-  // Retry failed payment
+  // Retry failed payment (legacy method - using payment ID)
   async retryPayment(paymentId: string, paymentMethod: string = 'upi'): Promise<any> {
     const response = await api.post(`/payments/${paymentId}/retry`, { paymentMethod });
+    return response.data;
+  },
+  
+  // Retry payment for an order (new method - using order ID)
+  async retryOrderPayment(orderId: string): Promise<any> {
+    const response = await api.post(`/orders/${orderId}/retry-payment`);
     return response.data;
   },
 };

@@ -48,11 +48,19 @@ export interface RazorpayOrderRequest {
 }
 
 export interface RazorpayOrderResponse {
-  razorpay_order_id: string;
-  amount: number;
-  currency: string;
-  key_id: string;
-  order_id: string;
+  success: boolean;
+  razorpayOrder: {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+  };
+  key: string;
+  orderDetails: {
+    id: string;
+    total: number;
+    items?: any[];
+  };
 }
 
 export interface PaymentVerificationRequest {

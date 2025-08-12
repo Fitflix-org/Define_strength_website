@@ -17,6 +17,8 @@ api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('auth_token');
     if (token) {
+      // Debug: Log the token being sent
+      console.log('🔑 Sending token:', token.substring(0, 20) + '...');
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

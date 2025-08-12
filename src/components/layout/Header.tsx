@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
-import { Menu, ShoppingCart, Phone, User, LogOut, Package } from "lucide-react";
+import { Menu, ShoppingCart, Phone, User, LogOut, Package, Heart, MessageCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 
@@ -77,6 +77,14 @@ const Header = () => {
             <ShoppingCart className="h-4 w-4" />
             Cart ({itemsCount})
           </Button>
+
+          {/* Wishlist Icon (for authenticated users) */}
+          {isAuthenticated && (
+            <Button variant="ghost" size="sm" onClick={() => navigate('/wishlist')} className="text-gray-300 hover:text-white hover:bg-gray-800">
+              <Heart className="h-4 w-4" />
+              Wishlist
+            </Button>
+          )}
           
           {isAuthenticated ? (
             <DropdownMenu>
@@ -91,6 +99,12 @@ const Header = () => {
                   <Package className="h-4 w-4 mr-2" />
                   My Orders
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+                  <Heart className="h-4 w-4 mr-2" />
+                  Wishlist
+                </DropdownMenuItem>
+                {/* Support menu item temporarily removed - admin-only feature */}
+                {/* TODO: Add role-based access control for admin features */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="h-4 w-4 mr-2" />

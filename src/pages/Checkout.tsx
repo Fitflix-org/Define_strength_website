@@ -14,6 +14,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { addressService, Address, CreateAddressData } from "@/services/addressService";
+import { orderService } from "@/services/orderService";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -192,32 +193,41 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      // Process checkout
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create order with payment_initiated status
+      const shippingAddress = {
+        firstName: address.firstName,
+        lastName: address.lastName,
+        address: `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}`,
+        city: address.city,
+        state: address.state,
+        zipCode: address.zipCode,
+        country: address.country,
+        phone: address.phone,
+      };
+
+      const { order, isExisting } = await orderService.createOrder(shippingAddress);
       
-      // Navigate to payment page with complete address data
+      toast({
+        title: isExisting ? "Resuming Order" : "Order Created",
+        description: `${isExisting ? 'Continuing existing order' : 'Order created successfully'} (#${order.id}). Redirecting to payment...`,
+      });
+
+      // Navigate to payment page with order data
       navigate("/payment", {
         state: {
-          addressId: selectedAddress,
-          orderNotes,
-          total,
-          items: items,
-          shippingAddress: {
-            firstName: address.firstName,
-            lastName: address.lastName,
-            address: `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}`,
-            city: address.city,
-            state: address.state,
-            zipCode: address.zipCode,
-            country: address.country,
-            phone: address.phone,
-          }
+          orderId: order.id,
+          orderNumber: order.orderNumber || order.id,
+          total: order.total,
+          items: order.items,
+          shippingAddress: shippingAddress,
+          status: "payment_initiated"
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Order creation failed:", error);
       toast({
         title: "Order Failed",
-        description: "Failed to process order. Please try again.",
+        description: error.response?.data?.message || "Failed to create order. Please try again.",
         variant: "destructive",
       });
     } finally {
