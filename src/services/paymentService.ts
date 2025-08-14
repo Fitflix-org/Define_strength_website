@@ -83,7 +83,7 @@ export const paymentService = {
     razorpay_order_id: string;
     razorpay_payment_id: string;
     razorpay_signature: string;
-    order_id: string;
+    orderId: string;
   }) {
     const response = await api.post('/payments/verify-payment', data);
     return response.data;
