@@ -20,9 +20,11 @@ interface CartItem {
 
 interface PaymentSuccessData {
   orderId: string;
+  orderNumber?: string;
   total: number;
   paymentMethod: string;
-  items: CartItem[];
+  items?: CartItem[];
+  codOrder?: boolean;
 }
 
 const PaymentSuccess = () => {
@@ -39,9 +41,10 @@ const PaymentSuccess = () => {
     }
 
     // Show success toast
+    const isCoD = successData.codOrder || successData.paymentMethod === "cod";
     toast({
-      title: "Payment Successful!",
-      description: `Order ${successData.orderId} has been placed successfully.`,
+      title: isCoD ? "Order Placed Successfully!" : "Payment Successful!",
+      description: `Order ${successData.orderNumber || successData.orderId} has been placed successfully.`,
     });
 
     // Store order in localStorage (mock order management)
@@ -91,6 +94,8 @@ const PaymentSuccess = () => {
       upi: "UPI",
       netbanking: "Net Banking",
       wallet: "Digital Wallet",
+      cod: "Cash on Delivery",
+      razorpay: "Online Payment",
     };
     return methods[method] || method;
   };
@@ -107,9 +112,14 @@ const PaymentSuccess = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
             <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-black mb-2">Payment Successful!</h1>
+          <h1 className="text-3xl font-bold text-black mb-2">
+            {successData.codOrder ? "Order Placed Successfully!" : "Payment Successful!"}
+          </h1>
           <p className="text-gray-600">
-            Thank you for your order. Your payment has been processed successfully.
+            {successData.codOrder 
+              ? "Thank you for your order. Your order has been placed and will be delivered soon."
+              : "Thank you for your order. Your payment has been processed successfully."
+            }
           </p>
         </div>
 
@@ -119,7 +129,7 @@ const PaymentSuccess = () => {
             <CardTitle className="flex items-center justify-between">
               <span>Order Confirmation</span>
               <span className="text-sm font-normal text-gray-600">
-                Order #{successData.orderId}
+                Order #{successData.orderNumber || successData.orderId}
               </span>
             </CardTitle>
           </CardHeader>
@@ -148,6 +158,23 @@ const PaymentSuccess = () => {
                 </p>
               </div>
               <div>
+                <p className="text-gray-600">Payment Status</p>
+                <div className="flex items-center space-x-2">
+                  {successData.codOrder ? (
+                    <>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        Pending
+                      </span>
+                      <span className="text-xs text-gray-500">Pay on delivery</span>
+                    </>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Paid
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
                 <p className="text-gray-600">Estimated Delivery</p>
                 <p className="font-semibold text-black">
                   {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
@@ -157,6 +184,17 @@ const PaymentSuccess = () => {
                   })}
                 </p>
               </div>
+              {successData.codOrder && (
+                <div className="col-span-2 pt-3 border-t">
+                  <p className="text-gray-600 text-sm">Amount Due on Delivery</p>
+                  <p className="font-bold text-red-600 text-xl">
+                    ${successData.total.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Please keep exact change ready for the delivery agent
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -164,26 +202,30 @@ const PaymentSuccess = () => {
             {/* Order Items */}
             <div className="space-y-3">
               <h4 className="font-semibold text-black">Order Items</h4>
-              {successData.items.map((item) => (
-                <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <img
-                    src={item.product.images[0] || "/placeholder.svg"}
-                    alt={item.product.name}
-                    className="w-12 h-12 object-cover rounded-md"
-                  />
-                  <div className="flex-1">
-                    <h5 className="font-medium text-black text-sm line-clamp-2">
-                      {item.product.name}
-                    </h5>
-                    <p className="text-gray-600 text-sm">
-                      Quantity: {item.quantity}
-                    </p>
+              {successData.items && successData.items.length > 0 ? (
+                successData.items.map((item) => (
+                  <div key={item.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <img
+                      src={item.product.images[0] || "/placeholder.svg"}
+                      alt={item.product.name}
+                      className="w-12 h-12 object-cover rounded-md"
+                    />
+                    <div className="flex-1">
+                      <h5 className="font-medium text-black text-sm line-clamp-2">
+                        {item.product.name}
+                      </h5>
+                      <p className="text-gray-600 text-sm">
+                        Quantity: {item.quantity}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-black">
+                      ${((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
+                    </span>
                   </div>
-                  <span className="font-semibold text-black">
-                    ${((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-gray-600 text-sm">Order items information not available.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -216,6 +258,19 @@ const PaymentSuccess = () => {
                 </p>
               </div>
             </div>
+            {successData.codOrder && (
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-orange-600 font-bold text-xs">₹</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-black">Cash on Delivery</h4>
+                  <p className="text-gray-600 text-sm">
+                    Please keep <strong>${successData.total.toFixed(2)}</strong> ready for payment when the delivery agent arrives. We recommend having exact change.
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

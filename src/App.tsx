@@ -27,6 +27,15 @@ import Checkout from "./pages/Checkout";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
+import Wishlist from "./pages/Wishlist";
+import WishlistAnalytics from "./pages/WishlistAnalytics";
+// import Support from "./pages/Support"; // Temporarily removed - admin-only feature
+import AuthTest from "./pages/AuthTest";
+import APITester from "./pages/APITester";
+import PaymentFlowDebugger from "./debug/PaymentFlowDebugger";
+import EnvironmentDebugger from "./debug/EnvironmentDebugger";
+import PaymentFlowTester from "./debug/PaymentFlowTester";
+import FrontendBackendDebugger from "./debug/FrontendBackendDebugger";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +62,12 @@ const App = () => (
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/auth-test" element={<AuthTest />} />
+                  <Route path="/api-test" element={<APITester />} />
+                  <Route path="/payment-debug" element={<PaymentFlowDebugger />} />
+                  <Route path="/env-debug" element={<EnvironmentDebugger />} />
+                  <Route path="/payment-flow-test" element={<PaymentFlowTester />} />
+                  <Route path="/integration-debug" element={<FrontendBackendDebugger />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
@@ -88,6 +103,18 @@ const App = () => (
                       <PaymentFailure />
                     </ProtectedRoute>
                   } />
+                  <Route path="/wishlist" element={
+                    <ProtectedRoute>
+                      <Wishlist />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/wishlist/analytics" element={
+                    <ProtectedRoute>
+                      <WishlistAnalytics />
+                    </ProtectedRoute>
+                  } />
+                  {/* Support route temporarily removed - admin-only feature */}
+                  {/* TODO: Implement role-based access control for admin features */}
                   
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

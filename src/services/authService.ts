@@ -23,7 +23,10 @@ export interface RegisterData {
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string;
+  expiresIn: number;
   message: string;
 }
 

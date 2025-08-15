@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { productService, Product } from "@/services/productService";
+import ProductReviews from "@/components/common/ProductReviews.updated";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -317,6 +318,9 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Product Reviews */}
+        <ProductReviews productId={product.id} />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

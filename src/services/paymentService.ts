@@ -22,6 +22,8 @@ export interface Payment {
   failureReason?: string;
   createdAt: string;
   updatedAt: string;
+  expiresAt?: string;
+  canRetry?: boolean;
 }
 
 export interface CreatePaymentRequest {
@@ -71,6 +73,23 @@ export const paymentService = {
     return response.data.payment;
   },
 
+  // Razorpay specific endpoints
+  async createRazorpayOrder(data: { orderId: string; amount: number; currency?: string }) {
+    console.log('Creating Razorpay order:', data);
+    const response = await api.post('/payments/create-razorpay-order', data);
+    return response.data;
+  },
+
+  async verifyRazorpayPayment(data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    order_id: string;
+  }) {
+    const response = await api.post('/payments/verify-payment', data);
+    return response.data;
+  },
+
   // Update payment status
   async updatePaymentStatus(paymentId: string, data: UpdatePaymentRequest): Promise<Payment> {
     const response = await api.patch(`/payments/${paymentId}/status`, data);
@@ -85,8 +104,17 @@ export const paymentService = {
 
   // Get payments for an order
   async getOrderPayments(orderId: string): Promise<Payment[]> {
-    const response = await api.get(`/payments/order/${orderId}`);
-    return response.data.payments;
+    try {
+      const response = await api.get(`/payments/order/${orderId}`);
+      return response.data.payments || [];
+    } catch (error: any) {
+      // If endpoint doesn't exist (404), return empty array
+      if (error.response?.status === 404) {
+        console.warn(`Payment endpoint not found for order ${orderId}, returning empty payments array`);
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Create refund

@@ -35,6 +35,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           Cookies.remove('auth_token');
           setUser(null);
         }
+      } else {
+        // No token found, ensure user is null
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -47,14 +50,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const response = await authService.login(data);
       
-      // Store token in cookie with production-ready settings
+      // Store the accessToken (NOT token) in cookie with production-ready settings
       const isProduction = import.meta.env.PROD;
-      Cookies.set('auth_token', response.token, { 
+      console.log('🎟️ Storing accessToken:', response.accessToken.substring(0, 20) + '...');
+      Cookies.set('auth_token', response.accessToken, { 
         expires: 7, // 7 days
         secure: isProduction, // Only secure in production
         sameSite: isProduction ? 'strict' : 'lax',
         path: '/'
       });
+      
+      // Verify token was stored
+      const storedToken = Cookies.get('auth_token');
+      console.log('✅ Token stored successfully:', storedToken ? 'Yes' : 'No');
       
       setUser(response.user);
       
@@ -79,9 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const response = await authService.register(data);
       
-      // Store token in cookie with production-ready settings
+      // Store the accessToken in cookie with production-ready settings
       const isProduction = import.meta.env.PROD;
-      Cookies.set('auth_token', response.token, { 
+      Cookies.set('auth_token', response.accessToken, { 
         expires: 7, // 7 days
         secure: isProduction, // Only secure in production
         sameSite: isProduction ? 'strict' : 'lax',
