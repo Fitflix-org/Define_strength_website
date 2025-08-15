@@ -75,6 +75,7 @@ export const paymentService = {
 
   // Razorpay specific endpoints
   async createRazorpayOrder(data: { orderId: string; amount: number; currency?: string }) {
+    console.log('Creating Razorpay order:', data);
     const response = await api.post('/payments/create-razorpay-order', data);
     return response.data;
   },

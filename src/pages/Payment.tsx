@@ -140,6 +140,11 @@ const Payment = () => {
 
     // Redirect to checkout if no payment data
     if (!paymentData) {
+      toast({
+        title: "Missing Payment Data",
+        description: "Your payment session is invalid or expired. Please return to checkout.",
+        variant: "destructive",
+      });
       navigate("/checkout");
       return;
     }
@@ -248,8 +253,8 @@ const Payment = () => {
       // Navigate to success page
       navigate("/payment-success", {
         state: {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
+          orderId: order.order.id,
+          orderNumber: order.order.orderNumber,
           total: finalTotal,
           paymentMethod: "cod",
           codOrder: true,
