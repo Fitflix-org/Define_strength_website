@@ -35,8 +35,8 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
+            <h3 className="text-lg font-semibold mb-2">Quick Links</h3>
+            <ul className="space-y-1">
               {[
                 { name: "Shop Equipment", href: "/shop" },
                 { name: "Consultancy Services", href: "/consultancy" },
@@ -48,7 +48,7 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link 
                     to={link.href} 
-                    className="text-gray-300 hover:text-white transition-colors"
+                    className="text-gray-300 text-sm  hover:text-[#eded77] transition-colors"
                   >
                     {link.name}
                   </Link>
@@ -59,8 +59,8 @@ const Footer = () => {
 
           {/* Categories */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Equipment Categories</h3>
-            <ul className="space-y-2">
+            <h3 className="text-lg font-semibold mb-2">Equipment Categories</h3>
+            <ul className="space-y-1">
               {[
                 "Strength Equipment",
                 "Cardio Machines",
@@ -72,7 +72,7 @@ const Footer = () => {
                 <li key={category}>
                   <Link 
                     to={`/shop?category=${category.toLowerCase().replace(' ', '-')}`}
-                    className="text-gray-300 hover:text-white transition-colors"
+                    className="text-gray-300 text-sm hover:text-[#eded77] transition-colors"
                   >
                     {category}
                   </Link>
@@ -83,18 +83,18 @@ const Footer = () => {
 
           {/* Contact & Newsletter */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Get In Touch</h3>
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center space-x-2 text-gray-300">
+            <h3 className="text-lg font-semibold mb-2">Get In Touch</h3>
+            <div className="space-y-2 mb-6">
+              <div className="flex items-center text-sm space-x-2 text-gray-300">
                 <Phone className="h-4 w-4" />
                 <span>+1 (555) 123-4567</span>
               </div>
-              <div className="flex items-center space-x-2 text-gray-300">
+              <div className="flex items-center text-sm space-x-2 text-gray-300">
                 <Mail className="h-4 w-4" />
                 <span>definestrengthpvtltd@gmail.com</span>
               </div>
-              <div className="flex items-center space-x-2 text-gray-300">
-                <MapPin className="h-4 w-4" />
+              <div className="flex items-center text-sm space-x-2 text-gray-300">
+                <MapPin className="h-12 w-12" />
                 <span>90/2, Kishan Icon, Next to Ironhill, Above Barkaaz, Marathahalli Colony, Bangalore, Karnataka, India, 560037</span>
               </div>
             </div>
@@ -113,7 +113,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/20 mt-12 pt-8 text-center text-gray-300">
+        <div className="border-t border-white/20 mt-12 pt-8 text-sm text-center text-gray-300">
           <p>&copy; 2024 Define Strength. All rights reserved. | Privacy Policy | Terms of Service</p>
         </div>
       </div>
