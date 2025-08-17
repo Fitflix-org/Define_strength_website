@@ -8,8 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 interface PaymentFailureData {
   orderId: string;
   total: number;
-  paymentMethod: string;
-  reason: string;
+  paymentMethod?: string;
+  error?: string;
+  guidance?: string;
+  canRetry?: boolean;
 }
 
 const PaymentFailure = () => {
@@ -47,6 +49,9 @@ const PaymentFailure = () => {
     // Navigate back to payment page with the same data
     navigate("/payment", { state: location.state });
   };
+  
+  // Determine if we should show the retry button
+  const showRetryButton = failureData?.canRetry !== false;
 
   const commonFailureReasons = [
     {
@@ -133,10 +138,16 @@ const PaymentFailure = () => {
               </div>
             </div>
 
-            {failureData.reason && (
+            {failureData.error && (
               <div className="p-3 bg-red-50 rounded-lg border border-red-200">
                 <h4 className="font-semibold text-red-800 mb-1">Failure Reason</h4>
-                <p className="text-red-700 text-sm">{failureData.reason}</p>
+                <p className="text-red-700 text-sm">{failureData.error}</p>
+                {failureData.guidance && (
+                  <div className="mt-2 p-2 bg-red-100 rounded">
+                    <p className="text-red-800 text-sm font-medium">What to do:</p>
+                    <p className="text-red-700 text-sm">{failureData.guidance}</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -162,14 +173,16 @@ const PaymentFailure = () => {
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button
-            onClick={handleRetryPayment}
-            className="w-full bg-olive-600 hover:bg-olive-700"
-            size="lg"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry Payment
-          </Button>
+          {showRetryButton && (
+            <Button
+              onClick={handleRetryPayment}
+              className="w-full bg-olive-600 hover:bg-olive-700"
+              size="lg"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Payment
+            </Button>
+          )}
           
           <div className="grid grid-cols-2 gap-3">
             <Button

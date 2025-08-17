@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   CreditCard, 
   Smartphone,
@@ -14,7 +15,8 @@ import {
   ArrowLeft, 
   Lock, 
   CheckCircle,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -61,6 +63,7 @@ const PaymentWithRazorpay = () => {
   const [selectedMethod, setSelectedMethod] = useState<string>("razorpay");
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderCreated, setOrderCreated] = useState<any>(null);
+  const [orderCreationError, setOrderCreationError] = useState<string | null>(null);
 
   const paymentData = location.state as PaymentData;
 
@@ -79,7 +82,7 @@ const PaymentWithRazorpay = () => {
   const paymentMethods: PaymentMethod[] = [
     {
       id: "razorpay",
-      name: "Online Payment",
+      name: "Online Payment (UPI/Cards/Netbanking)",
       type: "razorpay",
       icon: CreditCard,
       description: "Pay securely with Credit/Debit Card, UPI, Net Banking, or Wallet",
@@ -87,7 +90,7 @@ const PaymentWithRazorpay = () => {
     },
     {
       id: "cod",
-      name: "Cash on Delivery",
+      name: "Cash on Delivery (COD)",
       type: "cod",
       icon: Clock,
       description: "Pay when your order is delivered (₹50 extra charge)",
@@ -111,8 +114,8 @@ const PaymentWithRazorpay = () => {
       // Navigate to success page
       navigate("/payment-success", {
         state: {
-          orderId: orderCreated?.id || razorpayResponse.order_id,
-          orderNumber: orderCreated?.orderNumber || `ORD-${Date.now()}`,
+          orderId: orderCreated?.order?.id || razorpayResponse.order_id,
+          orderNumber: orderCreated?.order?.orderNumber || `ORD-${Date.now()}`,
           total: finalTotal,
           paymentMethod: "razorpay",
           paymentId: razorpayResponse.payment_id,
@@ -133,11 +136,31 @@ const PaymentWithRazorpay = () => {
 
   const handlePaymentError = (error: Error) => {
     console.error('Payment error:', error);
+    
+    // Enhanced error handling with more specific guidance
+    const errorMessage = error.message || 'An unknown error occurred';
+    let userGuidance = '';
+    
+    // Provide specific guidance based on common error patterns
+    if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+      userGuidance = 'Please check your internet connection and try again.';
+    } else if (errorMessage.includes('declined') || errorMessage.includes('insufficient')) {
+      userGuidance = 'Your payment was declined. Please try another payment method or contact your bank.';
+    } else if (errorMessage.includes('cancelled')) {
+      userGuidance = 'You cancelled the payment. You can try again when ready.';
+    } else if (errorMessage.includes('verification')) {
+      userGuidance = 'Payment verification failed. Please contact our support team for assistance.';
+    } else {
+      userGuidance = 'Please try again or use a different payment method.';
+    }
+    
     navigate("/payment-failure", {
       state: {
         orderId: orderCreated?.id || 'unknown',
-        error: error.message,
+        error: errorMessage,
+        guidance: userGuidance,
         total: finalTotal,
+        canRetry: true
       }
     });
   };
@@ -156,7 +179,10 @@ const PaymentWithRazorpay = () => {
     setIsProcessing(true);
     try {
       // Create order with COD
-      const order = await orderService.createOrder(paymentData.shippingAddress);
+      const order = await orderService.createOrder({
+        items: paymentData.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
+        shippingAddress: paymentData.shippingAddress,
+      });
       
       // Clear cart
       clearCart();
@@ -164,8 +190,8 @@ const PaymentWithRazorpay = () => {
       // Navigate to success page
       navigate("/payment-success", {
         state: {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
+          orderId: order.order.id,
+          orderNumber: order.order.orderNumber,
           total: finalTotal,
           paymentMethod: "cod",
           codOrder: true,
@@ -194,17 +220,27 @@ const PaymentWithRazorpay = () => {
       return null;
     }
 
+    setIsProcessing(true);
+    setOrderCreationError(null);
+    
     try {
-      const order = await orderService.createOrder(paymentData.shippingAddress);
+      const order = await orderService.createOrder({
+        items: paymentData.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
+        shippingAddress: paymentData.shippingAddress,
+      });
       setOrderCreated(order);
+      setIsProcessing(false);
       return order;
     } catch (error: any) {
       console.error('Order creation failed:', error);
+      const errorMessage = error.message || "Failed to create order. Please try again.";
+      setOrderCreationError(errorMessage);
       toast({
         title: "Order Creation Failed",
-        description: error.message || "Failed to create order. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+      setIsProcessing(false);
       return null;
     }
   };
@@ -246,7 +282,13 @@ const PaymentWithRazorpay = () => {
               <CardContent>
                 <RadioGroup
                   value={selectedMethod}
-                  onValueChange={setSelectedMethod}
+                  onValueChange={(value) => {
+                    setSelectedMethod(value);
+                    // Automatically create order when Razorpay is selected
+                    if (value === "razorpay" && !orderCreated) {
+                      createOrderForRazorpay();
+                    }
+                  }}
                   className="space-y-4"
                 >
                   {paymentMethods.map((method) => {
@@ -291,22 +333,48 @@ const PaymentWithRazorpay = () => {
             {/* Razorpay Payment Component */}
             {selectedMethod === "razorpay" && (
               <div>
-                <RazorpayCheckout
-                  orderId={orderCreated?.id || `temp-${Date.now()}`}
-                  amount={finalTotal}
-                  currency="INR"
-                  customerInfo={{
-                    name: user?.firstName && user?.lastName 
-                      ? `${user.firstName} ${user.lastName}` 
-                      : user?.email,
-                    email: user?.email,
-                    contact: user?.phone,
-                  }}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  disabled={isProcessing}
-                />
-                {!orderCreated && (
+                {orderCreationError && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertDescription>
+                      {orderCreationError}
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto font-semibold ml-2"
+                        onClick={() => createOrderForRazorpay()}
+                      >
+                        Try Again
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {isProcessing && !orderCreated && (
+                  <div className="flex items-center justify-center p-6 bg-muted rounded-lg mb-4">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <p>Creating your order...</p>
+                  </div>
+                )}
+                
+                {orderCreated && (
+                  <RazorpayCheckout
+                    orderId={orderCreated?.order?.id || `temp-${Date.now()}`}
+                    amount={finalTotal}
+                    currency="INR"
+                    customerInfo={{
+                      name: user?.firstName && user?.lastName 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : user?.email,
+                      email: user?.email,
+                      contact: user?.phone,
+                    }}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                    disabled={isProcessing}
+                  />
+                )}
+                
+                {/* Auto-create order on component mount if Razorpay is selected */}
+                {!orderCreated && !isProcessing && !orderCreationError && (
                   <Button 
                     onClick={createOrderForRazorpay}
                     variant="outline"

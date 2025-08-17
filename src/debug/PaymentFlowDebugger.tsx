@@ -32,7 +32,18 @@ const PaymentFlowDebugger: React.FC = () => {
         phone: '9876543210'
       };
 
-      const order = await orderService.createOrder(demoShippingAddress);
+      // Create demo order data with both items and shipping address
+      const orderData = {
+        items: [
+          {
+            productId: 'demo-product-1',
+            quantity: 1
+          }
+        ],
+        shippingAddress: demoShippingAddress
+      };
+
+      const { order } = await orderService.createOrder(orderData);
       setOrderCreated(order);
       addLog(`✅ Internal order created successfully!`);
       addLog(`📋 Order ID: ${order.id}`);

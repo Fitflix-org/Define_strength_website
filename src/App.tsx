@@ -27,6 +27,7 @@ import Checkout from "./pages/Checkout";
 import Payment from "./pages/Payment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import Wishlist from "./pages/Wishlist";
 import WishlistAnalytics from "./pages/WishlistAnalytics";
 // import Support from "./pages/Support"; // Temporarily removed - admin-only feature
@@ -96,6 +97,11 @@ const App = () => (
                   <Route path="/payment-success" element={
                     <ProtectedRoute>
                       <PaymentSuccess />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/order-confirmation" element={
+                    <ProtectedRoute>
+                      <OrderConfirmation />
                     </ProtectedRoute>
                   } />
                   <Route path="/payment-failure" element={

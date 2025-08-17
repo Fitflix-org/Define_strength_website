@@ -205,7 +205,16 @@ const Checkout = () => {
         phone: address.phone,
       };
 
-      const { order, isExisting } = await orderService.createOrder(shippingAddress);
+      // Create order data with both items and shipping address
+      const orderData = {
+        items: items.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity
+        })),
+        shippingAddress: shippingAddress
+      };
+
+      const { order, isExisting } = await orderService.createOrder(orderData);
       
       toast({
         title: isExisting ? "Resuming Order" : "Order Created",

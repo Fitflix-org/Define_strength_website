@@ -62,8 +62,8 @@ export const orderService = {
   },
 
   // Create a new order from cart (handles 200 or 201 and existing order reuse)
-  async createOrder(shippingAddress: ShippingAddress): Promise<{ order: Order; isExisting?: boolean }> {
-    const response = await api.post('/orders/create', { shippingAddress });
+  async createOrder(orderData: CreateOrderRequest & { shippingAddress: ShippingAddress }): Promise<{ order: Order; isExisting?: boolean }> {
+    const response = await api.post('/orders/create', orderData);
     return { order: response.data.order, isExisting: response.data.isExisting };
   },
 
