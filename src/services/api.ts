@@ -29,36 +29,13 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle auth errors and provide better error handling
+// Added consistent error handling
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle different types of errors
-    if (error.response) {
-      // Server responded with error status
-      const { status, data } = error.response;
-      
-      if (status === 401) {
-        // Unauthorized - clear token and redirect to login if needed
-        Cookies.remove('auth_token');
-        // Don't auto-redirect here, let components handle it
-      } else if (status === 403) {
-        // Forbidden - user doesn't have permission
-        console.error('Access forbidden:', data?.message || 'Insufficient permissions');
-      } else if (status === 429) {
-        // Rate limit exceeded
-        console.error('Rate limit exceeded. Please try again later.');
-      } else if (status >= 500) {
-        // Server error
-        console.error('Server error occurred. Please try again later.');
-      }
-    } else if (error.request) {
-      // Network error
-      console.error('Network error. Please check your connection.');
-    } else {
-      // Other error
-      console.error('An unexpected error occurred:', error.message);
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );

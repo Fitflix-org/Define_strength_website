@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard } from 'lucide-react';
-import { razorpayService, RazorpayService } from '@/services/razorpayService';
+// Legacy component not used in new flow; keep a lightweight wrapper if needed
 import { useToast } from '@/hooks/use-toast';
 
 interface PaymentButtonProps {
@@ -38,46 +38,7 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const handlePayment = async () => {
-    if (!razorpayService.isAvailable()) {
-      const error = new Error('Payment gateway not configured');
-      onError(error);
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const paymentResult = await razorpayService.processPayment({
-        orderId,
-        amount: RazorpayService.formatAmountToPaise(amount),
-        currency,
-        customerInfo
-      });
-
-      if (paymentResult.verified && paymentResult.status === 'success') {
-        toast({
-          title: 'Payment Successful!',
-          description: 'Your payment has been processed successfully.',
-        });
-        onSuccess(paymentResult);
-      } else {
-        throw new Error(paymentResult.message || 'Payment verification failed');
-      }
-    } catch (error: any) {
-      console.error('Payment failed:', error);
-      
-      toast({
-        title: 'Payment Failed',
-        description: error.message || 'Payment failed. Please try again.',
-        variant: 'destructive',
-      });
-      
-      onError(error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  const handlePayment = async () => onError(new Error('Deprecated component'));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {

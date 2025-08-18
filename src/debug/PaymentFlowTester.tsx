@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { orderService } from '@/services/orderService';
-import { razorpayService } from '@/services/razorpayService';
+// Legacy debug import removed
 import { CheckCircle, XCircle, Clock, ArrowRight } from 'lucide-react';
 
 const PaymentFlowTester: React.FC = () => {

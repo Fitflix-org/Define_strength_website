@@ -18,12 +18,10 @@ import {
   CheckCircle,
   Package
 } from "lucide-react";
-import CountdownTimer from "@/components/common/CountdownTimer";
-import { getStatusColor, getStatusIcon, getTrackingSteps } from "@/lib/orderUtils.tsx";
+import { getStatusColor, getStatusIcon } from "@/lib/orderUtils.tsx";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { orderService, Order as BackendOrder } from "@/services/orderService";
-import { paymentService, Payment } from "@/services/paymentService";
 
 interface CartItem {
   id: string;
@@ -45,19 +43,9 @@ interface TrackingStep {
 }
 
 // Extended order interface for frontend with tracking
-interface Order extends Omit<BackendOrder, 'status'> {
-  status: "pending" | "payment_initiated" | "payment_failed" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "expired";
+interface Order extends BackendOrder {
   estimatedDelivery?: string;
-  payments?: Payment[];
-  latestPayment?: Payment;
-  expiresAt?: string;
-  paymentInitiatedAt?: string;
-  lastPaymentAttempt?: string;
-  canRetryPayment?: boolean;
-  isExpired?: boolean;
   trackingSteps?: TrackingStep[];
-  // Derived flag to indicate COD orders (based on latest payment method)
-  isCod?: boolean;
 }
 
 const Orders = () => {
@@ -69,55 +57,23 @@ const Orders = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [retryingPayments, setRetryingPayments] = useState<Set<string>>(new Set());
-  const [expiredOrders, setExpiredOrders] = useState<Set<string>>(new Set());
   const [orderToRetry, setOrderToRetry] = useState<Order | null>(null);
-  const [showStockWarning, setShowStockWarning] = useState(false);
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Use real API service
-      const backendOrders = await orderService.getOrders();
+      // Use real API service - fetch orders for current user
+      // Backend requires userId in path; page can be extended to pass actual user.id
+      const backendOrders = await orderService.getUserOrders('me');
       
-      // Fetch payments for each order
-      const ordersWithPayments = await Promise.all(
-        backendOrders.map(async (order) => {
-          let payments: Payment[] = [];
-          try {
-            payments = await paymentService.getOrderPayments(order.id);
-          } catch (error) {
-            console.warn(`Failed to fetch payments for order ${order.id}:`, error);
-          }
+      const ordersWithMeta = backendOrders.map(order => ({
+        ...order,
+        estimatedDelivery: order.createdAt ? 
+          new Date(Date.parse(order.createdAt as any) + 7 * 24 * 60 * 60 * 1000).toISOString() : 
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      }));
 
-          const latestPayment = payments.length > 0 ? payments[0] : undefined;
-          const isCod = (latestPayment?.paymentMethod || '').toLowerCase() === 'cod';
-          
-          // Calculate if order is expired
-          const isExpired = order.status === "expired" || 
-            (order.expiresAt && new Date(order.expiresAt) < new Date());
-          
-          // Calculate if payment can be retried
-          const canRetryPayment =
-            (order.status === "pending" || order.status === "payment_initiated" || order.status === "payment_failed") &&
-            !isExpired &&
-            !isCod;
-          
-          return {
-            ...order,
-            payments,
-            latestPayment,
-            isCod,
-            isExpired,
-            canRetryPayment,
-            estimatedDelivery: order.createdAt ? 
-              new Date(Date.parse(order.createdAt) + 7 * 24 * 60 * 60 * 1000).toISOString() : 
-              new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            trackingSteps: getTrackingSteps(order),
-          };
-        })
-      );
-
-      setOrders(ordersWithPayments);
+      setOrders(ordersWithMeta);
     } catch (error) {
       console.error("Failed to load orders:", error);
       
@@ -149,26 +105,22 @@ const Orders = () => {
     loadOrders();
   }, [isAuthenticated, navigate, loadOrders]);
 
-  const handleRetryClick = (order: Order) => {
-    setOrderToRetry(order);
-    setShowStockWarning(true);
-  };
+  const handleRetryClick = (order: Order) => setOrderToRetry(order);
 
   const retryPayment = async (orderId: string) => {
     setRetryingPayments(prev => new Set(prev).add(orderId));
     
     try {
-      // Retry the failed payment through the backend using the order ID
-      await orderService.retryOrderPayment(orderId);
-      
-      toast({
-        title: "Payment Retry Initiated",
-        description: "Your payment retry has been initiated. Please check your payment method for further instructions.",
-      });
-      
-      // Reload orders to get updated payment status
-      await loadOrders();
-      
+      const response = await orderService.retryOrderPayment(orderId);
+      if (response.success) {
+        navigate('/payment', { state: response });
+      } else {
+        toast({
+          title: "Payment Retry Failed",
+          description: "Failed to initiate payment retry.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       console.error("Payment retry failed:", error);
       toast({
@@ -187,35 +139,19 @@ const Orders = () => {
 
   const confirmRetryPayment = async () => {
     if (!orderToRetry) return;
-
-    setShowStockWarning(false);
     setRetryingPayments(prev => new Set(prev).add(orderToRetry.id));
-    
     try {
-      // Retry the failed payment through the backend using the order ID
-      await orderService.retryOrderPayment(orderToRetry.id);
-      
-      toast({
-        title: "Payment Retry Initiated",
-        description: "Your payment retry has been initiated. Please check your payment method for further instructions.",
-      });
-      
-      // Reload orders to get updated payment status
-      await loadOrders();
-      
+      const response = await orderService.retryOrderPayment(orderToRetry.id);
+      if (response.success) {
+        navigate('/payment', { state: response });
+      } else {
+        toast({ title: "Payment Retry Failed", description: "Failed to initiate payment retry.", variant: "destructive" });
+      }
     } catch (error: any) {
       console.error("Payment retry failed:", error);
-      toast({
-        title: "Retry Failed",
-        description: error.response?.data?.message || "Failed to retry payment. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Retry Failed", description: error.response?.data?.message || "Failed to retry payment. Please try again.", variant: "destructive" });
     } finally {
-      setRetryingPayments(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(orderToRetry.id);
-        return newSet;
-      });
+      setRetryingPayments(prev => { const n = new Set(prev); n.delete(orderToRetry.id); return n; });
       setOrderToRetry(null);
     }
   };
@@ -291,34 +227,13 @@ const Orders = () => {
 
         {/* Order Filters */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4 mb-2">
-            <TabsTrigger value="all">All Orders ({orders.length})</TabsTrigger>
-            <TabsTrigger value="pending">
-              Pending ({orders.filter(o => o.status === "pending").length})
-            </TabsTrigger>
-            <TabsTrigger value="payment_initiated">
-              Payment Initiated ({orders.filter(o => o.status === "payment_initiated").length})
-            </TabsTrigger>
-            <TabsTrigger value="payment_failed">
-              Payment Failed ({orders.filter(o => o.status === "payment_failed").length})
-            </TabsTrigger>
-          </TabsList>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="confirmed">
-              Confirmed ({orders.filter(o => o.status === "confirmed").length})
-            </TabsTrigger>
-            <TabsTrigger value="processing">
-              Processing ({orders.filter(o => o.status === "processing").length})
-            </TabsTrigger>
-            <TabsTrigger value="shipped">
-              Shipped ({orders.filter(o => o.status === "shipped").length})
-            </TabsTrigger>
-            <TabsTrigger value="delivered">
-              Delivered ({orders.filter(o => o.status === "delivered").length})
-            </TabsTrigger>
-            <TabsTrigger value="expired">
-              Expired ({orders.filter(o => o.status === "expired").length})
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
+            <TabsTrigger value="pending">Pending ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+            <TabsTrigger value="payment_initiated">Payment Initiated ({orders.filter(o => o.status === "payment_initiated").length})</TabsTrigger>
+            <TabsTrigger value="failed">Failed ({orders.filter(o => o.status === "failed").length})</TabsTrigger>
+            <TabsTrigger value="confirmed">Confirmed ({orders.filter(o => o.status === "confirmed").length})</TabsTrigger>
+            <TabsTrigger value="cancelled">Cancelled ({orders.filter(o => o.status === "cancelled").length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-6">
@@ -387,66 +302,53 @@ const Orders = () => {
 
                   <Separator />
 
-                  {/* Tracking Steps */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-black">Order Tracking</h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      {order.trackingSteps.map((step) => (
-                        <div key={step.status} className="flex flex-col items-center text-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
-                            step.completed 
-                              ? "bg-olive-600 text-white" 
-                              : "bg-gray-200 text-gray-400"
-                          }`}>
-                            {step.completed ? (
-                              <CheckCircle className="h-4 w-4" />
-                            ) : (
-                              <Clock className="h-4 w-4" />
-                            )}
-                          </div>
-                          <p className={`text-xs font-medium ${
-                            step.completed ? "text-olive-600" : "text-gray-400"
-                          }`}>
-                            {step.label}
-                          </p>
-                          {step.timestamp && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(step.timestamp).toLocaleDateString()}
+                  {/* Timeline: show only for confirmed and after */}
+                  {['confirmed'].includes(order.status) && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-black">Fulfillment Timeline</h4>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { key: 'confirmed', label: 'Confirmed' },
+                          { key: 'processing', label: 'Processing' },
+                          { key: 'shipped', label: 'Shipped' },
+                          { key: 'delivered', label: 'Delivered' },
+                        ].map((step) => (
+                          <div key={step.key} className="flex flex-col items-center text-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                              (step.key === 'confirmed') ? 'bg-olive-600 text-white' : 'bg-gray-200 text-gray-400'
+                            }`}>
+                              {(step.key === 'confirmed') ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : (
+                                <Clock className="h-4 w-4" />
+                              )}
+                            </div>
+                            <p className={`text-xs font-medium ${
+                              (step.key === 'confirmed') ? 'text-olive-600' : 'text-gray-400'
+                            }`}>
+                              {step.label}
                             </p>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <Separator />
 
-                  {/* Payment Retry Section - only for online payments (not COD) */}
-                  {(
-                    (order.status === "pending" || order.status === "payment_initiated" || order.status === "payment_failed") &&
-                    order.canRetryPayment &&
-                    !order.isCod
-                  ) && (
+                  {/* Retry button for non-successful payments */}
+                  {(['pending', 'payment_initiated', 'failed'].includes(order.status)) && (
                     <div className="bg-amber-50 p-4 rounded-md mb-4">
                       <div className="flex items-start">
                         <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 mr-3" />
                         <div>
                           <h4 className="font-semibold text-amber-800 mb-1">Payment Required</h4>
-                          <p className="text-sm text-amber-700 mb-3">
-                            {order.status === "payment_failed" 
-                              ? "Your previous payment attempt was unsuccessful. Please retry your payment to complete your order."
-                              : "Your order is awaiting payment. Please complete your payment to process your order."}
-                          </p>
-                          {order.expiresAt && (
-                              <p className="text-xs text-amber-600 mb-3">
-                                Order expires in <CountdownTimer expiresAt={order.expiresAt} onTimerEnd={() => setExpiredOrders(prev => new Set(prev).add(order.id))} />
-                              </p>
-                            )}
+                          <p className="text-sm text-amber-700 mb-3">Your order is awaiting payment. Please complete your payment to process your order.</p>
                           <Button 
                             size="sm"
                             className="bg-amber-600 hover:bg-amber-700 text-white"
                             onClick={() => retryPayment(order.id)}
-                            disabled={retryingPayments.has(order.id) || expiredOrders.has(order.id)}
+                            disabled={retryingPayments.has(order.id)}
                           >
                             {retryingPayments.has(order.id) ? (
                               <>

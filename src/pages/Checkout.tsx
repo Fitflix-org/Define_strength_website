@@ -14,7 +14,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { addressService, Address, CreateAddressData } from "@/services/addressService";
-import { orderService } from "@/services/orderService";
+import { ShippingAddress, orderService } from "@/services/orderService";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -193,8 +193,8 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      // Create order with payment_initiated status
-      const shippingAddress = {
+      // Prepare shipping address
+      const shippingAddress: ShippingAddress = {
         firstName: address.firstName,
         lastName: address.lastName,
         address: `${address.addressLine1}${address.addressLine2 ? ', ' + address.addressLine2 : ''}`,
@@ -205,33 +205,16 @@ const Checkout = () => {
         phone: address.phone,
       };
 
-      // Create order data with both items and shipping address
-      const orderData = {
-        items: items.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        })),
-        shippingAddress: shippingAddress
-      };
-
-      const { order, isExisting } = await orderService.createOrder(orderData);
-      
-      toast({
-        title: isExisting ? "Resuming Order" : "Order Created",
-        description: `${isExisting ? 'Continuing existing order' : 'Order created successfully'} (#${order.id}). Redirecting to payment...`,
+      // Create order and get Razorpay order details
+      const created = await orderService.createOrder({
+        items: items.map(i => ({ productId: i.product.id, quantity: i.quantity })),
+        shippingAddress,
       });
 
-      // Navigate to payment page with order data
-      navigate("/payment", {
-        state: {
-          orderId: order.id,
-          orderNumber: order.orderNumber || order.id,
-          total: order.total,
-          items: order.items,
-          shippingAddress: shippingAddress,
-          status: "payment_initiated"
-        }
-      });
+      toast({ title: "Order Created", description: `Order #${created.order.orderNumber}` });
+
+      // Navigate to payment page with created order + razorpay details
+      navigate('/payment', { state: created });
     } catch (error: any) {
       console.error("Order creation failed:", error);
       toast({

@@ -1,29 +1,17 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Loader2,
-  CreditCard,
-  Smartphone,
-  Building2,
-  Wallet,
-  CreditCard as EMI,
-} from "lucide-react";
-import { razorpayService, RazorpayService } from "@/services/razorpayService";
+import { Loader2, CreditCard, Smartphone, Building2, Wallet, CreditCard as EMI } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface RazorpayCheckoutProps {
   orderId: string;
   amount: number;
   currency?: string;
+  razorpayOrderId: string;
+  publicKey: string;
   customerInfo?: {
     name?: string;
     email?: string;
@@ -47,6 +35,8 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
   orderId,
   amount,
   currency = "INR",
+  razorpayOrderId,
+  publicKey,
   customerInfo,
   onSuccess,
   onError,
@@ -57,37 +47,55 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if Razorpay is available
-  const isRazorpayAvailable = razorpayService.isAvailable();
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const handlePayment = async () => {
-    if (!isRazorpayAvailable) {
-      const errorMsg = "Payment gateway is not properly configured";
-      setError(errorMsg);
-      onError(new Error(errorMsg));
-      return;
-    }
-
     setIsProcessing(true);
     setError(null);
 
     try {
-      const paymentResult = await razorpayService.processPayment({
-        orderId,
-        amount: RazorpayService.formatAmountToPaise(amount),
-        currency,
-        customerInfo,
-      });
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) throw new Error('Failed to load Razorpay SDK');
 
-      if (paymentResult.success) {
-        toast({
-          title: "Payment Successful!",
-          description: paymentResult.message, // "Payment verified and completed successfully"
-        });
-        onSuccess(paymentResult);
-      } else {
-        throw new Error(paymentResult.message || "Payment verification failed");
-      }
+      const options: any = {
+        key: publicKey,
+        amount: Math.round(amount * 100),
+        currency,
+        name: 'Define Strength',
+        description: `Order ${orderId}`,
+        order_id: razorpayOrderId,
+        notes: { order_id: orderId },
+        handler: (response: any) => onSuccess(response),
+        modal: { ondismiss: () => onError(new Error('Payment cancelled by user')) },
+        prefill: customerInfo,
+        theme: { color: '#000000' },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.on('payment.failed', async (resp: any) => {
+        try {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/orders/payment-failed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ orderId, razorpay_order_id: resp?.error?.metadata?.order_id, error: resp?.error })
+          });
+        } catch {}
+        onError(new Error(resp?.error?.description || 'Payment failed'));
+      });
+      razorpay.open();
     } catch (error: any) {
       console.error("Payment failed:", error);
       const errorMessage = error.message || "Payment failed. Please try again.";
@@ -113,17 +121,15 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
     }).format(value);
   };
 
-  const supportedMethods = razorpayService.getSupportedPaymentMethods();
+  const supportedMethods = [
+    { id: 'card', name: 'Credit/Debit Card' },
+    { id: 'upi', name: 'UPI' },
+    { id: 'netbanking', name: 'Net Banking' },
+    { id: 'wallet', name: 'Wallet' },
+    { id: 'emi', name: 'EMI' },
+  ];
 
-  if (!isRazorpayAvailable) {
-    return (
-      <Alert className="mb-4">
-        <AlertDescription>
-          Payment gateway is not configured. Please contact support.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  // SDK is loaded lazily on click; no pre-check needed
 
   return (
     <Card className={`w-full ${className}`}>

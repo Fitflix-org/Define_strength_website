@@ -1,39 +1,30 @@
 import api from './api';
 
-export interface Order {
-  id: string;
-  orderNumber: string;
-  userId: string;
-  status: 'pending' | 'payment_initiated' | 'payment_failed' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'expired';
-  total: number;
-  createdAt: string;
-  updatedAt: string;
-  paymentInitiatedAt?: string;
-  expiresAt?: string;
-  lastPaymentAttempt?: string;
-  items: OrderItem[];
-  canRetryPayment?: boolean;
-  isExpired?: boolean;
-}
-
 export interface OrderItem {
   id: string;
   orderId: string;
   productId: string;
   quantity: number;
   price: number;
-  product: {
-    id: string;
-    name: string;
-    images: string[];
-  };
+  product: { id: string; name: string; images: string[] };
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  userId: string;
+  status: 'pending' | 'payment_initiated' | 'confirmed' | 'failed' | 'cancelled';
+  total: number;
+  items: OrderItem[];
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  createdAt: string | Date;
 }
 
 export interface CreateOrderRequest {
-  items: Array<{
-    productId: string;
-    quantity: number;
-  }>;
+  items: Array<{ productId: string; quantity: number }>;
+  shippingAddress: ShippingAddress;
 }
 
 export interface ShippingAddress {
@@ -48,34 +39,28 @@ export interface ShippingAddress {
 }
 
 export const orderService = {
-  // Get all orders for the current user
-  async getOrders(): Promise<Order[]> {
-    const response = await api.get('/orders');
-    // Backend now returns orders array directly
-    return response.data;
+  async createOrder(data: CreateOrderRequest): Promise<{ order: Order; razorpay: { orderId: string; amount: number; currency: string; key: string } }> {
+    const res = await api.post('/orders/create', data);
+    return res.data;
   },
 
-  // Get a specific order by ID
+  async verifyPayment(payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; orderId?: string }): Promise<{ success: boolean }> {
+    const res = await api.post('/orders/verify', payload);
+    return res.data;
+  },
+
   async getOrder(orderId: string): Promise<Order> {
-    const response = await api.get(`/orders/${orderId}`);
-    return response.data;
+    const res = await api.get(`/orders/${orderId}`);
+    return res.data;
   },
 
-  // Create a new order from cart (handles 200 or 201 and existing order reuse)
-  async createOrder(orderData: CreateOrderRequest & { shippingAddress: ShippingAddress }): Promise<{ order: Order; isExisting?: boolean }> {
-    const response = await api.post('/orders/create', orderData);
-    return { order: response.data.order, isExisting: response.data.isExisting };
+  async getUserOrders(userId: string): Promise<Order[]> {
+    const res = await api.get(`/orders/user/${userId}`);
+    return res.data;
   },
 
-  // Retry failed payment (legacy method - using payment ID)
-  async retryPayment(paymentId: string, paymentMethod: string = 'upi'): Promise<any> {
-    const response = await api.post(`/payments/${paymentId}/retry`, { paymentMethod });
-    return response.data;
-  },
-  
-  // Retry payment for an order (new method - using order ID)
-  async retryOrderPayment(orderId: string): Promise<any> {
-    const response = await api.post(`/orders/${orderId}/retry-payment`);
-    return response.data;
+  async retryOrderPayment(orderId: string): Promise<{ success: boolean; order: Partial<Order>; razorpay: { orderId: string; amount: number; currency: string; key: string } }> {
+    const res = await api.post(`/orders/${orderId}/retry`);
+    return res.data;
   },
 };

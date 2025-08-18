@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { XCircle, RefreshCw, ArrowLeft, Home, HelpCircle, Phone, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { orderService } from "@/services/orderService";
 
 interface PaymentFailureData {
   orderId: string;
@@ -45,9 +46,23 @@ const PaymentFailure = () => {
     return methods[method] || method;
   };
 
-  const handleRetryPayment = () => {
-    // Navigate back to payment page with the same data
-    navigate("/payment", { state: location.state });
+  const handleRetryPayment = async () => {
+    if (!failureData?.orderId) {
+      toast({ title: "Error", description: "Order information is missing.", variant: "destructive" });
+      navigate("/orders");
+      return;
+    }
+    try {
+      const response = await orderService.retryOrderPayment(failureData.orderId);
+      if (response.success) {
+        navigate('/payment', { state: response });
+      } else {
+        toast({ title: 'Payment Retry Failed', description: 'Could not initiate retry.', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      console.error('Retry payment error:', e);
+      toast({ title: 'Retry Error', description: e.message || 'Failed to retry payment', variant: 'destructive' });
+    }
   };
   
   // Determine if we should show the retry button

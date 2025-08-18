@@ -30,11 +30,37 @@ export interface NewsletterUnsubscribeRequest {
   email: string;
 }
 
+export interface CallbackRequest {
+  name: string;
+  phone: string;
+  email?: string;
+  preferredTime?: string;
+  message?: string;
+}
+
+export interface CallbackCheckResponse {
+  exists: boolean;
+  reference?: string;
+  createdAt?: string;
+}
+
 // Contact service functions
 export const contactService = {
   // Send contact form message
   async sendContactMessage(messageData: ContactMessage): Promise<ContactResponse> {
     const response = await api.post('/contact/send', messageData);
+    return response.data;
+  },
+
+  // Create callback request
+  async createCallback(data: CallbackRequest): Promise<{ success: boolean; reference?: string; message?: string }> {
+    const response = await api.post('/contact/callback', data);
+    return response.data;
+  },
+
+  // Check recent callback
+  async checkCallback(params: { phone?: string; email?: string }): Promise<CallbackCheckResponse> {
+    const response = await api.get('/contact/callback/check', { params });
     return response.data;
   },
 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { orderService } from '@/services/orderService';
-import { razorpayService } from '@/services/razorpayService';
+// Legacy debug import removed
 
 const PaymentFlowDebugger: React.FC = () => {
   const { user } = useAuth();

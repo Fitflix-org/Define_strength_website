@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, Mail, MapPin, Clock, MessageCircle, ArrowRight, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { contactService } from "@/services/contactService";
 
 const Contact = () => {
   const contactMethods = [
@@ -65,6 +68,64 @@ const Contact = () => {
     }
   ];
 
+  // Callback form state
+  const { toast } = useToast();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [projectType, setProjectType] = useState<string | undefined>(undefined);
+  const [budget, setBudget] = useState<string | undefined>(undefined);
+  const [timeline, setTimeline] = useState<string | undefined>(undefined);
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const onSubmit = async () => {
+    if (!firstName || !lastName || !email || !phone) {
+      toast({ title: "Missing information", description: "Please fill all required fields.", variant: "destructive" });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email.", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Pre-submit duplicate check
+      const check = await contactService.checkCallback({ phone, email });
+      if (check?.exists) {
+        toast({ title: "Request already received", description: `Reference: ${check.reference}`, variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
+
+      const res = await contactService.createCallback({
+        name: `${firstName} ${lastName}`.trim(),
+        phone,
+        email,
+        preferredTime: timeline,
+        message,
+      });
+      if (res.success) {
+        toast({ title: "Callback requested", description: `Reference: ${res.reference}` });
+        // Reset minimal fields
+        setFirstName("");
+        setLastName("");
+        setEmail("");
+        setPhone("");
+        setTimeline(undefined);
+        setMessage("");
+      } else {
+        toast({ title: "Failed", description: res.message || "Could not submit callback.", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Something went wrong.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
@@ -112,27 +173,27 @@ const Contact = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">First Name *</Label>
-                    <Input id="firstName" placeholder="John" required />
+                    <Input id="firstName" placeholder="John" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                   </div>
                   <div>
                     <Label htmlFor="lastName">Last Name *</Label>
-                    <Input id="lastName" placeholder="Doe" required />
+                    <Input id="lastName" placeholder="Doe" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
                   </div>
                 </div>
 
                 <div>
                   <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" placeholder="john@example.com" required />
+                  <Input id="email" type="email" placeholder="john@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
 
                 <div>
                   <Label htmlFor="phone">Phone *</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" required />
+                  <Input id="phone" type="tel" placeholder="+91 XXXXXXXXXX" required value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
 
                 <div>
                   <Label htmlFor="projectType">Project Type *</Label>
-                  <Select required>
+                  <Select required value={projectType} onValueChange={setProjectType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select project type" />
                     </SelectTrigger>
@@ -148,23 +209,23 @@ const Contact = () => {
 
                 <div>
                   <Label htmlFor="budget">Budget Range</Label>
-                  <Select>
+                  <Select value={budget} onValueChange={setBudget}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select budget range (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="under-5k">Under $5,000</SelectItem>
-                      <SelectItem value="5k-15k">$5,000 - $15,000</SelectItem>
-                      <SelectItem value="15k-50k">$15,000 - $50,000</SelectItem>
-                      <SelectItem value="50k-100k">$50,000 - $100,000</SelectItem>
-                      <SelectItem value="100k-plus">$100,000+</SelectItem>
+                      <SelectItem value="under-5k">Under ₹5,00,000</SelectItem>
+                      <SelectItem value="5k-15k">₹5,00,000 - ₹15,00,000</SelectItem>
+                      <SelectItem value="15k-50k">₹15,00,000 - ₹50,00,000</SelectItem>
+                      <SelectItem value="50k-100k">₹50,00,000 - ₹1,00,00,000</SelectItem>
+                      <SelectItem value="100k-plus">₹1,00,00,000+</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label htmlFor="timeline">Preferred Timeline</Label>
-                  <Select>
+                  <Select value={timeline} onValueChange={setTimeline}>
                     <SelectTrigger>
                       <SelectValue placeholder="When do you want to start?" />
                     </SelectTrigger>
@@ -184,12 +245,14 @@ const Contact = () => {
                     id="message" 
                     placeholder="Tell us about your space, goals, equipment preferences, and any specific requirements..."
                     rows={5}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                   />
                 </div>
 
-                <Button className="w-full" size="lg" variant="cta">
+                <Button className="w-full" size="lg" variant="cta" onClick={onSubmit} disabled={submitting}>
                   <Send className="mr-2 h-5 w-5" />
-                  Send Message
+                  {submitting ? 'Submitting...' : 'Request Callback'}
                 </Button>
 
                 <div className="text-center text-sm text-muted-foreground space-y-1">

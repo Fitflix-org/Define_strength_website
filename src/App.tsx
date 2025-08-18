@@ -109,6 +109,7 @@ const App = () => (
                       <PaymentFailure />
                     </ProtectedRoute>
                   } />
+                  
                   <Route path="/wishlist" element={
                     <ProtectedRoute>
                       <Wishlist />
