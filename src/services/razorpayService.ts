@@ -49,14 +49,15 @@ export class RazorpayService {
 
   // Verify payment signature
   async verifyPayment(verificationData: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
-    try {
-      const response = await api.post('/payments/verify-payment', verificationData);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error verifying payment:', error);
-      throw new Error(error.response?.data?.message || 'Payment verification failed');
-    }
+  try {
+    // ✅ Fix: Add /api prefix to match backend route
+    const response = await api.post('/api/payments/verify-payment', verificationData);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error verifying payment:', error);
+    throw new Error(error.response?.data?.message || 'Payment verification failed');
   }
+}
 
   // Open Razorpay checkout
   async openCheckout(options: Partial<RazorpayOptions>): Promise<RazorpayPaymentResponse> {
@@ -83,7 +84,9 @@ export class RazorpayService {
             reject(new Error('Payment cancelled by user'));
           }
         },
-        handler: (response: RazorpayPaymentResponse) => {
+        handler: (response: RazorpayPaymentResponse) => {  
+          console.log("Handler got:", response);
+          console.log("Razorpay handler response:", response);
           resolve(response);
         },
         retry: {
@@ -149,7 +152,7 @@ export class RazorpayService {
         razorpay_order_id: paymentResponse.razorpay_order_id,
         razorpay_payment_id: paymentResponse.razorpay_payment_id,
         razorpay_signature: paymentResponse.razorpay_signature,
-        order_id: orderId
+        // order_id: orderId
       });
 
       return verificationResponse;

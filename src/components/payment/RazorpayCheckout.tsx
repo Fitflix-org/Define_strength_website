@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Smartphone, Building2, Wallet, CreditCard as EMI } from 'lucide-react';
-import { razorpayService, RazorpayService } from '@/services/razorpayService';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  CreditCard,
+  Smartphone,
+  Building2,
+  Wallet,
+  CreditCard as EMI,
+} from "lucide-react";
+import { razorpayService, RazorpayService } from "@/services/razorpayService";
+import { useToast } from "@/hooks/use-toast";
 
 interface RazorpayCheckoutProps {
   orderId: string;
@@ -27,18 +40,18 @@ const paymentMethodIcons = {
   upi: Smartphone,
   netbanking: Building2,
   wallet: Wallet,
-  emi: EMI
+  emi: EMI,
 };
 
 export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
   orderId,
   amount,
-  currency = 'INR',
+  currency = "INR",
   customerInfo,
   onSuccess,
   onError,
   disabled = false,
-  className = ''
+  className = "",
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +62,7 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
 
   const handlePayment = async () => {
     if (!isRazorpayAvailable) {
-      const errorMsg = 'Payment gateway is not properly configured';
+      const errorMsg = "Payment gateway is not properly configured";
       setError(errorMsg);
       onError(new Error(errorMsg));
       return;
@@ -63,29 +76,29 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
         orderId,
         amount: RazorpayService.formatAmountToPaise(amount),
         currency,
-        customerInfo
+        customerInfo,
       });
 
-      if (paymentResult.verified && paymentResult.status === 'success') {
+      if (paymentResult.success) {
         toast({
-          title: 'Payment Successful!',
-          description: 'Your order has been placed successfully.',
+          title: "Payment Successful!",
+          description: paymentResult.message, // "Payment verified and completed successfully"
         });
         onSuccess(paymentResult);
       } else {
-        throw new Error(paymentResult.message || 'Payment verification failed');
+        throw new Error(paymentResult.message || "Payment verification failed");
       }
     } catch (error: any) {
-      console.error('Payment failed:', error);
-      const errorMessage = error.message || 'Payment failed. Please try again.';
+      console.error("Payment failed:", error);
+      const errorMessage = error.message || "Payment failed. Please try again.";
       setError(errorMessage);
-      
+
       toast({
-        title: 'Payment Failed',
+        title: "Payment Failed",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
-      
+
       onError(error);
     } finally {
       setIsProcessing(false);
@@ -93,8 +106,8 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 2,
     }).format(value);
@@ -123,7 +136,7 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
           Pay securely using Razorpay - India's most trusted payment gateway
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Amount Display */}
         <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
@@ -136,9 +149,16 @@ export const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
           <p className="text-sm font-medium mb-2">Supported Payment Methods:</p>
           <div className="flex flex-wrap gap-2">
             {supportedMethods.map((method) => {
-              const IconComponent = paymentMethodIcons[method.id as keyof typeof paymentMethodIcons];
+              const IconComponent =
+                paymentMethodIcons[
+                  method.id as keyof typeof paymentMethodIcons
+                ];
               return (
-                <Badge key={method.id} variant="secondary" className="flex items-center gap-1">
+                <Badge
+                  key={method.id}
+                  variant="secondary"
+                  className="flex items-center gap-1"
+                >
                   {IconComponent && <IconComponent className="h-3 w-3" />}
                   {method.name}
                 </Badge>

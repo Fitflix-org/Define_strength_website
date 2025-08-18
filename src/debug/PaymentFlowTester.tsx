@@ -60,11 +60,11 @@ const PaymentFlowTester: React.FC = () => {
       setOrderData(orderResponse);
       
       addLog('✅ STEP 1 COMPLETED: Internal order created successfully!', 'success');
-      addLog(`📦 Order ID: ${orderResponse.id}`, 'success');
-      addLog(`📋 Order Number: ${orderResponse.orderNumber}`, 'success');
-      addLog(`💰 Order Total: ₹${orderResponse.total}`, 'success');
-      addLog(`📊 Order Status: ${orderResponse.status}`, 'success');
-      addLog(`📅 Created At: ${orderResponse.createdAt}`, 'info');
+      addLog(`📦 Order ID: ${orderResponse.order.id}`, 'success');
+      addLog(`📋 Order Number: ${orderResponse.order.orderNumber}`, 'success');
+      addLog(`💰 Order Total: ₹${orderResponse.order.total}`, 'success');
+      addLog(`📊 Order Status: ${orderResponse.order.status}`, 'success');
+      addLog(`📅 Created At: ${orderResponse.order.createdAt}`, 'info');
       
       // Log complete response for debugging
       addLog(`🔍 Complete Order Response: ${JSON.stringify(orderResponse, null, 2)}`, 'info');
@@ -127,36 +127,37 @@ const PaymentFlowTester: React.FC = () => {
   };
 
   // Step 3: Test Full Payment Flow (without actual payment)
-  const testStep3_PaymentFlow = async () => {
+    const testStep3_PaymentFlow = async () => {
     if (!orderData || !razorpayOrderData) {
       addLog('❌ Cannot proceed: Missing order data. Complete Steps 1 & 2 first.', 'error');
       return;
     }
-
+  
     try {
       setCurrentStep(3);
       addLog('🎯 STEP 3: Testing complete payment flow...', 'info');
-      
-      addLog('📱 This would open Razorpay checkout with:', 'info');
-      addLog(`🏷️ Razorpay Order ID: ${razorpayOrderData.razorpayOrder.id}`, 'info');
-      addLog(`💰 Amount: ₹${razorpayOrderData.razorpayOrder.amount / 100}`, 'info');
-      addLog(`👤 Customer: ${user?.email}`, 'info');
-      
-      // Simulate what would happen in real payment
+  
+      // Simulate payment response
       const simulatedPaymentResponse = {
+        order_id: orderData.id, // <-- Add this!
         razorpay_order_id: razorpayOrderData.razorpayOrder.id,
         razorpay_payment_id: 'pay_simulation_12345',
         razorpay_signature: 'simulated_signature_abcdef'
       };
-      
+  
       addLog('🔄 Simulating payment completion...', 'info');
       addLog(`📋 Simulated Razorpay response: ${JSON.stringify(simulatedPaymentResponse, null, 2)}`, 'info');
-      
-      addLog('✅ STEP 3 SIMULATION COMPLETED', 'success');
-      addLog('💡 In real flow, this would call /api/payments/verify-payment', 'info');
-      
+  
+      // Call verify-payment endpoint
+      addLog('📤 Sending request to: POST /api/payments/verify-payment', 'info');
+      const verifyResult = await razorpayService.verifyPayment(simulatedPaymentResponse);
+      setPaymentResult(verifyResult);
+  
+      addLog('✅ STEP 3 COMPLETED: Payment verification response received!', 'success');
+      addLog(`� Verification Result: ${JSON.stringify(verifyResult, null, 2)}`, 'info');
     } catch (error: any) {
       addLog(`❌ STEP 3 FAILED: ${error.message}`, 'error');
+      addLog(`🔍 Error details: ${JSON.stringify(error.response?.data || error, null, 2)}`, 'error');
       console.error('Step 3 error:', error);
     }
   };

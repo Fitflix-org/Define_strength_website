@@ -96,38 +96,6 @@ const Payment = () => {
       icon: Clock,
       description: "Pay when your order is delivered (₹50 extra charge)",
       enabled: true,
-    },
-    {
-      id: "card",
-      name: "Credit/Debit Card",
-      type: "card",
-      icon: CreditCard,
-      description: "Visa, Mastercard, American Express",
-      enabled: false,
-    },
-    {
-      id: "upi",
-      name: "UPI",
-      type: "upi",
-      icon: Wallet,
-      description: "Pay using UPI ID",
-      enabled: false,
-    },
-    {
-      id: "netbanking",
-      name: "Net Banking",
-      type: "netbanking",
-      icon: Building,
-      description: "Pay through your bank",
-      enabled: false,
-    },
-    {
-      id: "wallet",
-      name: "Digital Wallet",
-      type: "wallet",
-      icon: Wallet,
-      description: "Paytm, PhonePe, Google Pay",
-      enabled: false,
     }
   ];
 
@@ -172,6 +140,13 @@ const Payment = () => {
       setIsProcessing(true);
       
       // Step 4: Verify payment with backend
+      // const verificationResponse = await razorpayService.verifyPayment({
+      //   razorpay_order_id: razorpayResponse.razorpay_order_id,
+      //   razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+      //   razorpay_signature: razorpayResponse.razorpay_signature,
+      //   order_id: orderCreated?.id || ''
+      // });
+
       const verificationResponse = await razorpayService.verifyPayment({
         razorpay_order_id: razorpayResponse.razorpay_order_id,
         razorpay_payment_id: razorpayResponse.razorpay_payment_id,

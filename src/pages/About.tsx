@@ -273,7 +273,7 @@ const About = () => {
               Schedule Consultation
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+            <Button size="lg" variant="outline" className="border-white/30 text-[#808000] hover:bg-white/10">
               View Our Projects
             </Button>
           </div>

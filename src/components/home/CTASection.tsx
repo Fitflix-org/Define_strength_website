@@ -32,7 +32,7 @@ const CTASection = () => {
             <Button 
               size="lg" 
               variant="outline"
-              className="text-lg px-8 py-4 border-white/30 text-white hover:bg-white/10"
+              className="text-lg px-8 py-4 border-white/30 text-[#808000] hover:bg-white/10"
             >
               Shop Equipment
               <ArrowRight className="ml-2 h-5 w-5" />

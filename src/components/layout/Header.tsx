@@ -62,7 +62,7 @@ const Header = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium cursor-pointer transition-colors hover:text-primary ${
                 isActivePage(item.href) ? "text-primary" : "text-gray-300 hover:text-white"
               }`}
             >
@@ -117,7 +117,7 @@ const Header = () => {
               <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white hover:bg-gray-800">
                 <Link to="/login">Sign In</Link>
               </Button>
-              <Button variant="outline" size="sm" asChild className="text-gray-300 border-gray-600 hover:text-white hover:bg-gray-800">
+              <Button variant="outline" size="sm" asChild className="text-black border-gray-600 hover:text-white hover:bg-gray-800">
                 <Link to="/register">Register</Link>
               </Button>
             </div>

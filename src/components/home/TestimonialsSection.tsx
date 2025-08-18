@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Quote, Play, VideoIcon, Users, Calendar, MapPin, CheckCircle } from "lucide-react";
+import person from "@/assets/person.svg";
 
 const TestimonialsSection = () => {
   const testimonials = [
@@ -11,7 +12,7 @@ const TestimonialsSection = () => {
       location: "Mumbai",
       rating: 5,
       content: "Define Strength transformed my home into a professional gym. The equipment quality is outstanding and installation was seamless.",
-      image: "/placeholder.svg",
+      image: person,
       verified: true,
       category: "Home Gym",
       hasVideo: true,
@@ -24,7 +25,7 @@ const TestimonialsSection = () => {
       location: "Delhi",
       rating: 5,
       content: "Best investment for my commercial gym. Define Strength's expertise in space planning helped maximize our 2000 sq ft area perfectly.",
-      image: "/placeholder.svg",
+      image: person,
       verified: true,
       category: "Commercial",
       hasVideo: true,
@@ -37,7 +38,7 @@ const TestimonialsSection = () => {
       location: "Bangalore",
       rating: 5,
       content: "Our office gym setup by Define Strength boosted employee wellness and productivity. Highly recommended for corporate setups.",
-      image: "/placeholder.svg",
+      image: person,
       verified: true,
       category: "Corporate",
       hasVideo: false,
