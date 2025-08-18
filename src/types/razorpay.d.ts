@@ -64,10 +64,10 @@ export interface RazorpayOrderResponse {
 }
 
 export interface PaymentVerificationRequest {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-  order_id: string;
+  razorpay_order_id: string;  // Razorpay order ID (from payment gateway)
+  razorpay_payment_id: string; // Razorpay payment ID
+  razorpay_signature: string;  // HMAC signature from Razorpay
+  order_id: string;           // Your internal order ID
 }
 
 export interface PaymentVerificationResponse {
